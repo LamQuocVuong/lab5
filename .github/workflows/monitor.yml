@@ -1,0 +1,42 @@
+
+name: GoRest API Monitor
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check API response time
+        run: |
+          node --input-type=module <<'NODE'
+          import { performance } from 'node:perf_hooks';
+
+          const url = 'https://gorest.co.in/public/v2/users';
+          const start = performance.now();
+
+          try {
+            const response = await fetch(url);
+            const responseTime = performance.now() - start;
+
+            console.log(`HTTP Status: ${response.status}`);
+            console.log(`Response Time: ${responseTime.toFixed(2)} ms`);
+
+            if (response.status !== 200) {
+              throw new Error('API did not return HTTP 200');
+            }
+
+            if (responseTime >= 800) {
+              throw new Error('Response time must be below 800 ms');
+            }
+
+            console.log('Monitor PASSED');
+          } catch (error) {
+            console.error(error);
+            process.exitCode = 1;
+          }
+          NODE
