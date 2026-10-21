@@ -1,20 +1,32 @@
-name: Automated API tests using Postman CLI
+name: GoRest API Tests
 
-on: push
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
-  automated-api-tests:
+  api-testing:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Postman CLI
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Newman
+        run: npm install -g newman
+      - name: Run GoRest Postman collection
+        env:
+          GOREST_TOKEN: ${{ secrets.GOREST_TOKEN }}
         run: |
-          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
-      - name: Login to Postman CLI
-        run: postman login --with-api-key ${{ secrets.GOREST_TOKEN }}
-      - name: Run API tests
-        run: |
+          if [ -z "$GOREST_TOKEN" ]; then
+            echo "Missing GitHub Secret: GOREST_TOKEN"
+            exit 1
+          fi
           newman run Collection.json \
             -e Environment.json \
-            -d users.csv \s
-            --env-var "token=$GOREST_TOKEN"
+            -d users.csv \
+            --env-var "token=$GOREST_TOKEN" \
+            --reporters cli
